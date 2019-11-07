@@ -468,6 +468,7 @@ static void PrintMethodFields(
   }
 }
 
+//TODO [unary impl]
 enum StubType {
   ASYNC_INTERFACE = 0,
   BLOCKING_CLIENT_INTERFACE = 1,
@@ -477,6 +478,7 @@ enum StubType {
   BLOCKING_CLIENT_IMPL = 5,
   FUTURE_CLIENT_IMPL = 6,
   ABSTRACT_CLASS = 7,
+  UNARY_ABSTRACT_IMPL = 8,
 };
 
 enum CallType {
@@ -560,16 +562,25 @@ static void PrintStub(
   const string service_name = service->name();
   (*vars)["service_name"] = service_name;
   (*vars)["abstract_name"] = service_name + "ImplBase";
+  (*vars)["unary_abstract_name"] = service_name + "ImplBaseV2";
+
   std::string stub_name = service_name;
   std::string client_name = service_name;
   std::string stub_base_class_name = "AbstractStub";
+
   CallType call_type;
   bool impl_base = false;
   bool interface = false;
+  bool unary_impl_base = false;
   switch (type) {
     case ABSTRACT_CLASS:
       call_type = ASYNC_CALL;
       impl_base = true;
+      break;
+    case UNARY_ABSTRACT_IMPL:
+      //TODO need check LOGIC
+      call_type = ASYNC_CALL;
+      unary_impl_base = true;
       break;
     case ASYNC_CLIENT_IMPL:
       call_type = ASYNC_CALL;
@@ -628,6 +639,11 @@ static void PrintStub(
           *vars,
           "public static abstract class $abstract_name$ implements $BindableService$ {\n");
     }
+  } else if (unary_impl_base) {
+    //TODO [unary impl] only in unary mode
+    p->Print(
+            *vars,
+            "public static abstract class $unary_abstract_name$ extends $abstract_name$ {\n");
   } else {
     if (enable_deprecated) {
       if (interface) {
@@ -649,7 +665,8 @@ static void PrintStub(
   p->Indent();
 
   // Constructor and build() method
-  if (!impl_base && !interface) {
+  //TODO [unary impl]
+  if (!impl_base && !interface && !unary_impl_base) {
     p->Print(
         *vars,
         "private $stub_name$(\n"
@@ -695,159 +712,201 @@ static void PrintStub(
 
     // Method signature
     p->Print("\n");
-    // TODO(nmittler): Replace with WriteMethodDocComment once included by the protobuf distro.
-    if (!interface) {
-      GrpcWriteMethodDocComment(p, method);
-      if (enable_deprecated) {
-        p->Print(
-            *vars,
-            "@$Override$\n");
-      }
-    }
 
-    if (method->options().deprecated()) {
-      p->Print(*vars, "@$Deprecated$\n");
-    }
-
-    p->Print("public ");
-    switch (call_type) {
-      case BLOCKING_CALL:
-        GRPC_CODEGEN_CHECK(!client_streaming)
-            << "Blocking client interface with client streaming is unavailable";
-        if (server_streaming) {
-          // Server streaming
+    //todo none [unary impl]
+    if (!unary_impl_base) {
+      // TODO(nmittler): Replace with WriteMethodDocComment once included by the protobuf distro.
+      if (!interface) {
+        GrpcWriteMethodDocComment(p, method);
+        if (enable_deprecated) {
           p->Print(
-              *vars,
-              "$Iterator$<$output_type$> $lower_method_name$(\n"
-              "    $input_type$ request)");
-        } else {
-          // Simple RPC
-          p->Print(
-              *vars,
-              "$output_type$ $lower_method_name$($input_type$ request)");
+                  *vars,
+                  "@$Override$\n");
         }
-        break;
-      case ASYNC_CALL:
-        if (client_streaming) {
-          // Bidirectional streaming or client streaming
-          p->Print(
-              *vars,
-              "$StreamObserver$<$input_type$> $lower_method_name$(\n"
-              "    $StreamObserver$<$output_type$> responseObserver)");
-        } else {
-          // Server streaming or simple RPC
-          p->Print(
-              *vars,
-              "void $lower_method_name$($input_type$ request,\n"
-              "    $StreamObserver$<$output_type$> responseObserver)");
-        }
-        break;
-      case FUTURE_CALL:
-        GRPC_CODEGEN_CHECK(!client_streaming && !server_streaming)
-            << "Future interface doesn't support streaming. "
-            << "client_streaming=" << client_streaming << ", "
-            << "server_streaming=" << server_streaming;
-        p->Print(
-            *vars,
-            "$ListenableFuture$<$output_type$> $lower_method_name$(\n"
-            "    $input_type$ request)");
-        break;
-    }
-
-    if (interface) {
-      p->Print(";\n");
-      continue;
-    }
-    // Method body.
-    p->Print(" {\n");
-    p->Indent();
-    if (impl_base) {
-      switch (call_type) {
-        // NB: Skipping validation of service methods. If something is wrong, we wouldn't get to
-        // this point as compiler would return errors when generating service interface.
-        case ASYNC_CALL:
-          if (client_streaming) {
-            p->Print(
-                *vars,
-                "return asyncUnimplementedStreamingCall($method_method_name$(), responseObserver);\n");
-          } else {
-            p->Print(
-                *vars,
-                "asyncUnimplementedUnaryCall($method_method_name$(), responseObserver);\n");
-          }
-          break;
-        default:
-          break;
       }
-    } else if (!interface) {
+
+      if (method->options().deprecated()) {
+        p->Print(*vars, "@$Deprecated$\n");
+      }
+
+      p->Print("public ");
       switch (call_type) {
         case BLOCKING_CALL:
           GRPC_CODEGEN_CHECK(!client_streaming)
-              << "Blocking client streaming interface is not available";
-          if (server_streaming) {
-            (*vars)["calls_method"] = "blockingServerStreamingCall";
-            (*vars)["params"] = "request";
-          } else {
-            (*vars)["calls_method"] = "blockingUnaryCall";
-            (*vars)["params"] = "request";
-          }
-          p->Print(
-              *vars,
-              "return $calls_method$(\n"
-              "    getChannel(), $method_method_name$(), getCallOptions(), $params$);\n");
-          break;
+                  << "Blocking client interface with client streaming is unavailable";
+              if (server_streaming) {
+                // Server streaming
+                p->Print(
+                        *vars,
+                        "$Iterator$<$output_type$> $lower_method_name$(\n"
+                        "    $input_type$ request)");
+              } else {
+                // Simple RPC
+                p->Print(
+                        *vars,
+                        "$output_type$ $lower_method_name$($input_type$ request)");
+              }
+              break;
         case ASYNC_CALL:
-          if (server_streaming) {
-            if (client_streaming) {
-              (*vars)["calls_method"] = "asyncBidiStreamingCall";
-              (*vars)["params"] = "responseObserver";
-            } else {
-              (*vars)["calls_method"] = "asyncServerStreamingCall";
-              (*vars)["params"] = "request, responseObserver";
-            }
+          if (client_streaming) {
+            // Bidirectional streaming or client streaming
+            p->Print(
+                    *vars,
+                    "$StreamObserver$<$input_type$> $lower_method_name$(\n"
+                    "    $StreamObserver$<$output_type$> responseObserver)");
           } else {
-            if (client_streaming) {
-              (*vars)["calls_method"] = "asyncClientStreamingCall";
-              (*vars)["params"] = "responseObserver";
-            } else {
-              (*vars)["calls_method"] = "asyncUnaryCall";
-              (*vars)["params"] = "request, responseObserver";
-            }
+            // Server streaming or simple RPC
+            p->Print(
+                    *vars,
+                    "void $lower_method_name$($input_type$ request,\n"
+                    "    $StreamObserver$<$output_type$> responseObserver)");
           }
-          (*vars)["last_line_prefix"] = client_streaming ? "return " : "";
-          p->Print(
-              *vars,
-              "$last_line_prefix$$calls_method$(\n"
-              "    getChannel().newCall($method_method_name$(), getCallOptions()), $params$);\n");
-          break;
+              break;
         case FUTURE_CALL:
           GRPC_CODEGEN_CHECK(!client_streaming && !server_streaming)
-              << "Future interface doesn't support streaming. "
-              << "client_streaming=" << client_streaming << ", "
-              << "server_streaming=" << server_streaming;
-          (*vars)["calls_method"] = "futureUnaryCall";
-          p->Print(
-              *vars,
-              "return $calls_method$(\n"
-              "    getChannel().newCall($method_method_name$(), getCallOptions()), request);\n");
-          break;
+                  << "Future interface doesn't support streaming. "
+                  << "client_streaming=" << client_streaming << ", "
+                  << "server_streaming=" << server_streaming;
+              p->Print(
+                      *vars,
+                      "$ListenableFuture$<$output_type$> $lower_method_name$(\n"
+                      "    $input_type$ request)");
+              break;
       }
+
+      if (interface) {
+        p->Print(";\n");
+        continue;
+      }
+      // Method body.
+      p->Print(" {\n");
+      p->Indent();
+      if (impl_base) {
+        switch (call_type) {
+          // NB: Skipping validation of service methods. If something is wrong, we wouldn't get to
+          // this point as compiler would return errors when generating service interface.
+          case ASYNC_CALL:
+            if (client_streaming) {
+              p->Print(
+                      *vars,
+                      "return asyncUnimplementedStreamingCall($method_method_name$(), responseObserver);\n");
+            } else {
+              p->Print(
+                      *vars,
+                      "asyncUnimplementedUnaryCall($method_method_name$(), responseObserver);\n");
+            }
+                break;
+          default:
+            break;
+        }
+      } else if (!interface) {
+        switch (call_type) {
+          case BLOCKING_CALL:
+            GRPC_CODEGEN_CHECK(!client_streaming)
+                    << "Blocking client streaming interface is not available";
+                if (server_streaming) {
+                  (*vars)["calls_method"] = "blockingServerStreamingCall";
+                  (*vars)["params"] = "request";
+                } else {
+                  (*vars)["calls_method"] = "blockingUnaryCall";
+                  (*vars)["params"] = "request";
+                }
+                p->Print(
+                        *vars,
+                        "return $calls_method$(\n"
+                        "    getChannel(), $method_method_name$(), getCallOptions(), $params$);\n");
+                break;
+          case ASYNC_CALL:
+            if (server_streaming) {
+              if (client_streaming) {
+                (*vars)["calls_method"] = "asyncBidiStreamingCall";
+                (*vars)["params"] = "responseObserver";
+              } else {
+                (*vars)["calls_method"] = "asyncServerStreamingCall";
+                (*vars)["params"] = "request, responseObserver";
+              }
+            } else {
+              if (client_streaming) {
+                (*vars)["calls_method"] = "asyncClientStreamingCall";
+                (*vars)["params"] = "responseObserver";
+              } else {
+                (*vars)["calls_method"] = "asyncUnaryCall";
+                (*vars)["params"] = "request, responseObserver";
+              }
+            }
+                (*vars)["last_line_prefix"] = client_streaming ? "return " : "";
+                p->Print(
+                        *vars,
+                        "$last_line_prefix$$calls_method$(\n"
+                        "    getChannel().newCall($method_method_name$(), getCallOptions()), $params$);\n");
+                break;
+          case FUTURE_CALL:
+            GRPC_CODEGEN_CHECK(!client_streaming && !server_streaming)
+                    << "Future interface doesn't support streaming. "
+                    << "client_streaming=" << client_streaming << ", "
+                    << "server_streaming=" << server_streaming;
+                (*vars)["calls_method"] = "futureUnaryCall";
+                p->Print(
+                        *vars,
+                        "return $calls_method$(\n"
+                        "    getChannel().newCall($method_method_name$(), getCallOptions()), request);\n");
+                break;
+        }
+      }
+      p->Outdent();
+      p->Print("}\n");
+    } else {
+      //todo [unary impl] uanry only
+      if (client_streaming || server_streaming) {
+        continue;
+      }
+
+      // Simple RPC
+      p->Print(
+              *vars,
+              "public abstract $output_type$ $lower_method_name$($input_type$ request) throws java.lang.Throwable;\n\n");
+
+      p->Print(
+              *vars,
+              "@$Override$\n");
+
+      p->Print(
+              *vars,
+              "public final void $lower_method_name$($input_type$ request,\n"
+              "    $StreamObserver$<$output_type$> responseObserver) {\n");
+
+      p->Indent();
+      p->Print("try {\n");
+      p->Indent();
+      p->Print(*vars, "$output_type$ response = $lower_method_name$(request);\n");
+      p->Print("responseObserver.onNext(response);\n");
+      p->Print("responseObserver.onCompleted();\n");
+      p->Outdent();
+      p->Print("} catch (java.lang.Throwable t) {\n");
+
+      p->Indent();
+      p->Print("responseObserver.onError(t);\n");
+      p->Outdent();
+
+      p->Print("}\n");
+
+
+      p->Outdent();
+      p->Print("}\n");
     }
-    p->Outdent();
-    p->Print("}\n");
   }
 
   if (impl_base) {
     p->Print("\n");
     p->Print(
-        *vars,
-        "@$Override$ public final $ServerServiceDefinition$ bindService() {\n");
+            *vars,
+            "@$Override$ public final $ServerServiceDefinition$ bindService() {\n");
     (*vars)["instance"] = "this";
     PrintBindServiceMethodBody(service, vars, p);
     p->Print("}\n");
   }
-
   p->Outdent();
+
   p->Print("}\n\n");
 }
 
@@ -1209,6 +1268,8 @@ static void PrintService(const ServiceDescriptor* service,
   p->Print("}\n\n");
 
   PrintStub(service, vars, p, ABSTRACT_CLASS, enable_deprecated);
+  //TODO add unary impl base
+  PrintStub(service, vars, p, UNARY_ABSTRACT_IMPL, enable_deprecated);
   PrintStub(service, vars, p, ASYNC_CLIENT_IMPL, enable_deprecated);
   PrintStub(service, vars, p, BLOCKING_CLIENT_IMPL, enable_deprecated);
   PrintStub(service, vars, p, FUTURE_CLIENT_IMPL, enable_deprecated);
