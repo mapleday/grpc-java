@@ -555,7 +555,7 @@ static void PrintDeprecatedDocComment(const ServiceDescriptor* service,
 static void PrintStub(
     const ServiceDescriptor* service,
     std::map<string, string>* vars,
-    Printer* p, StubType type, bool generate_nano,
+    Printer* p, StubType type,
     bool enable_deprecated) {
   const string service_name = service->name();
   (*vars)["service_name"] = service_name;
@@ -862,7 +862,6 @@ static bool CompareMethodClientStreaming(const MethodDescriptor* method1,
 static void PrintMethodHandlerClass(const ServiceDescriptor* service,
                                    std::map<string, string>* vars,
                                    Printer* p,
-                                   bool generate_nano,
                                    bool enable_deprecated) {
   // Sort method ids based on client_streaming() so switch tables are compact.
   std::vector<const MethodDescriptor*> sorted_methods(service->method_count());
@@ -1209,19 +1208,18 @@ static void PrintService(const ServiceDescriptor* service,
   p->Outdent();
   p->Print("}\n\n");
 
-  bool generate_nano = flavor == ProtoFlavor::NANO;
-  PrintStub(service, vars, p, ABSTRACT_CLASS, generate_nano, enable_deprecated);
-  PrintStub(service, vars, p, ASYNC_CLIENT_IMPL, generate_nano, enable_deprecated);
-  PrintStub(service, vars, p, BLOCKING_CLIENT_IMPL, generate_nano, enable_deprecated);
-  PrintStub(service, vars, p, FUTURE_CLIENT_IMPL, generate_nano, enable_deprecated);
+  PrintStub(service, vars, p, ABSTRACT_CLASS, enable_deprecated);
+  PrintStub(service, vars, p, ASYNC_CLIENT_IMPL, enable_deprecated);
+  PrintStub(service, vars, p, BLOCKING_CLIENT_IMPL, enable_deprecated);
+  PrintStub(service, vars, p, FUTURE_CLIENT_IMPL, enable_deprecated);
 
   if (enable_deprecated) {
     PrintDeprecatedDocComment(service, vars, p);
-    PrintStub(service, vars, p, ASYNC_INTERFACE, generate_nano, true);
+    PrintStub(service, vars, p, ASYNC_INTERFACE, true);
     PrintDeprecatedDocComment(service, vars, p);
-    PrintStub(service, vars, p, BLOCKING_CLIENT_INTERFACE, generate_nano, true);
+    PrintStub(service, vars, p, BLOCKING_CLIENT_INTERFACE, true);
     PrintDeprecatedDocComment(service, vars, p);
-    PrintStub(service, vars, p, FUTURE_CLIENT_INTERFACE, generate_nano, true);
+    PrintStub(service, vars, p, FUTURE_CLIENT_INTERFACE, true);
 
     PrintDeprecatedDocComment(service, vars, p);
     p->Print(
@@ -1236,12 +1234,12 @@ static void PrintService(const ServiceDescriptor* service,
         "@$Deprecated$ public static $ServerServiceDefinition$ bindService("
         "final $service_name$ serviceImpl) {\n");
     (*vars)["instance"] = "serviceImpl";
-    PrintBindServiceMethodBody(service, vars, p, generate_nano);
+    PrintBindServiceMethodBody(service, vars, p);
     p->Print(
         *vars,
         "}\n\n");
   }
-  PrintMethodHandlerClass(service, vars, p, generate_nano, enable_deprecated);
+  PrintMethodHandlerClass(service, vars, p, enable_deprecated);
   PrintGetServiceDescriptorMethod(service, vars, p, flavor);
   p->Outdent();
   p->Print("}\n");

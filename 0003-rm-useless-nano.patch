@@ -1,0 +1,75 @@
+From f72aaa5d535a6613830b9137d91e511660b00a48 Mon Sep 17 00:00:00 2001
+From: weishibai <weishibai@kuaishou.com>
+Date: Sat, 5 Oct 2019 12:10:25 +0800
+Subject: [PATCH 3/4] rm useless nano
+
+---
+ .../src/java_plugin/cpp/java_generator.cpp    | 22 +++++++++----------
+ 1 file changed, 10 insertions(+), 12 deletions(-)
+
+diff --git a/compiler/src/java_plugin/cpp/java_generator.cpp b/compiler/src/java_plugin/cpp/java_generator.cpp
+index fcaa96f32..8b50d2d62 100644
+--- a/compiler/src/java_plugin/cpp/java_generator.cpp
++++ b/compiler/src/java_plugin/cpp/java_generator.cpp
+@@ -493,7 +493,7 @@ static void PrintDeprecatedDocComment(const ServiceDescriptor* service,
+ static void PrintStub(
+     const ServiceDescriptor* service,
+     std::map<string, string>* vars,
+-    Printer* p, StubType type, bool generate_nano,
++    Printer* p, StubType type,
+     bool enable_deprecated) {
+   const string service_name = service->name();
+   (*vars)["service_name"] = service_name;
+@@ -798,7 +798,6 @@ static bool CompareMethodClientStreaming(const MethodDescriptor* method1,
+ static void PrintMethodHandlerClass(const ServiceDescriptor* service,
+                                    std::map<string, string>* vars,
+                                    Printer* p,
+-                                   bool generate_nano,
+                                    bool enable_deprecated) {
+   // Sort method ids based on client_streaming() so switch tables are compact.
+   std::vector<const MethodDescriptor*> sorted_methods(service->method_count());
+@@ -1144,19 +1143,18 @@ static void PrintService(const ServiceDescriptor* service,
+   p->Outdent();
+   p->Print("}\n\n");
+ 
+-  bool generate_nano = flavor == ProtoFlavor::NANO;
+-  PrintStub(service, vars, p, ABSTRACT_CLASS, generate_nano, enable_deprecated);
+-  PrintStub(service, vars, p, ASYNC_CLIENT_IMPL, generate_nano, enable_deprecated);
+-  PrintStub(service, vars, p, BLOCKING_CLIENT_IMPL, generate_nano, enable_deprecated);
+-  PrintStub(service, vars, p, FUTURE_CLIENT_IMPL, generate_nano, enable_deprecated);
++  PrintStub(service, vars, p, ABSTRACT_CLASS, enable_deprecated);
++  PrintStub(service, vars, p, ASYNC_CLIENT_IMPL, enable_deprecated);
++  PrintStub(service, vars, p, BLOCKING_CLIENT_IMPL, enable_deprecated);
++  PrintStub(service, vars, p, FUTURE_CLIENT_IMPL, enable_deprecated);
+ 
+   if (enable_deprecated) {
+     PrintDeprecatedDocComment(service, vars, p);
+-    PrintStub(service, vars, p, ASYNC_INTERFACE, generate_nano, true);
++    PrintStub(service, vars, p, ASYNC_INTERFACE, true);
+     PrintDeprecatedDocComment(service, vars, p);
+-    PrintStub(service, vars, p, BLOCKING_CLIENT_INTERFACE, generate_nano, true);
++    PrintStub(service, vars, p, BLOCKING_CLIENT_INTERFACE, true);
+     PrintDeprecatedDocComment(service, vars, p);
+-    PrintStub(service, vars, p, FUTURE_CLIENT_INTERFACE, generate_nano, true);
++    PrintStub(service, vars, p, FUTURE_CLIENT_INTERFACE, true);
+ 
+     PrintDeprecatedDocComment(service, vars, p);
+     p->Print(
+@@ -1171,12 +1169,12 @@ static void PrintService(const ServiceDescriptor* service,
+         "@$Deprecated$ public static $ServerServiceDefinition$ bindService("
+         "final $service_name$ serviceImpl) {\n");
+     (*vars)["instance"] = "serviceImpl";
+-    PrintBindServiceMethodBody(service, vars, p, generate_nano);
++    PrintBindServiceMethodBody(service, vars, p);
+     p->Print(
+         *vars,
+         "}\n\n");
+   }
+-  PrintMethodHandlerClass(service, vars, p, generate_nano, enable_deprecated);
++  PrintMethodHandlerClass(service, vars, p, enable_deprecated);
+   PrintGetServiceDescriptorMethod(service, vars, p, flavor);
+   p->Outdent();
+   p->Print("}\n");
+-- 
+2.17.0
+
