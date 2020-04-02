@@ -633,7 +633,7 @@ static void PrintStub(
       if (interface) {
         p->Print(
             *vars,
-            "@$Deprecated$ public static interface $client_name$ {\n");
+            "public static interface $client_name$ extends com.kuaishou.infra.grpc.constant.RpcStubInterface {\n");
       } else {
         p->Print(
             *vars,
@@ -1155,7 +1155,7 @@ static void PrintService(const ServiceDescriptor* service,
 
   p->Print(
       *vars,
-      "public final class $service_class_name$ {\n\n");
+      "public final class $service_class_name$ implements com.kuaishou.infra.grpc.constant.RpcStubHolder {\n\n");
   p->Indent();
   p->Print(
       *vars,

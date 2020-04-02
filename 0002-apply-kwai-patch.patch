@@ -1,0 +1,34 @@
+From 74c46544ec54a5b4edfd93bd6dac148a57261601 Mon Sep 17 00:00:00 2001
+From: weishibai <weishibai@kuaishou.com>
+Date: Sat, 5 Oct 2019 11:52:42 +0800
+Subject: [PATCH 2/4] apply kwai patch
+
+---
+ compiler/src/java_plugin/cpp/java_generator.cpp | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/compiler/src/java_plugin/cpp/java_generator.cpp b/compiler/src/java_plugin/cpp/java_generator.cpp
+index 11da9e93b..fcaa96f32 100644
+--- a/compiler/src/java_plugin/cpp/java_generator.cpp
++++ b/compiler/src/java_plugin/cpp/java_generator.cpp
+@@ -564,7 +564,7 @@ static void PrintStub(
+       if (interface) {
+         p->Print(
+             *vars,
+-            "@$Deprecated$ public static interface $client_name$ {\n");
++            "public static interface $client_name$ extends com.kuaishou.infra.grpc.constant.RpcStubInterface {\n");
+       } else {
+         p->Print(
+             *vars,
+@@ -1091,7 +1091,7 @@ static void PrintService(const ServiceDescriptor* service,
+ 
+   p->Print(
+       *vars,
+-      "public final class $service_class_name$ {\n\n");
++      "public final class $service_class_name$ implements com.kuaishou.infra.grpc.constant.RpcStubHolder {\n\n");
+   p->Indent();
+   p->Print(
+       *vars,
+-- 
+2.17.0
+
