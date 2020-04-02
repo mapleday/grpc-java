@@ -62,11 +62,25 @@ subprojects {
                         artifact = "com.google.protobuf:protoc:${protocVersion}"
                     }
                 }
+
                 generateProtoTasks {
                     all().each { task ->
+                        task.dependsOn ':grpc-compiler:java_pluginExecutable'
+                        // Delete the generated sources first, so that we can be alerted if they are not re-compiled.
+                        task.dependsOn 'deleteGeneratedSource' + task.sourceSet.name
+                        // Recompile protos when the codegen has been changed
+                        task.inputs.file javaPluginPath
                         // Recompile protos when build.gradle has been changed, because
                         // it's possible the version of protoc has been changed.
                         task.inputs.file "${rootProject.projectDir}/build.gradle"
+                        task.plugins {
+                            grpc {
+                                // To generate deprecated interfaces and static bindService method,
+                                // turn the enable_deprecated option to true below:
+                                option 'enable_deprecated=false'
+                                option 'noversion'
+                            }
+                        }
                     }
                 }
             }
