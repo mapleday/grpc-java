@@ -885,7 +885,10 @@ static void PrintStub(
       p->Print("} catch (java.lang.Throwable t) {\n");
 
       p->Indent();
-      p->Print("responseObserver.onError(t);\n");
+      p->Print("com.google.common.base.Throwables.throwIfUnchecked(t);\n");
+      p->Print("throw new com.google.common.util.concurrent.UncheckedExecutionException(");
+      p->Print("\"GRPC_INTERNAL\"");
+      p->Print(", t);\n");
       p->Outdent();
 
       p->Print("}\n");
