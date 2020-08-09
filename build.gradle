@@ -21,10 +21,15 @@ subprojects {
     version = "1.28.0" // CURRENT_GRPC_VERSION
 
     repositories {
-        maven { // The google mirror is less flaky than mavenCentral()
-            url "https://maven-central.storage-download.googleapis.com/repos/central/data/" }
-        mavenCentral()
-        mavenLocal()
+//        maven { // The google mirror is less flaky than mavenCentral()
+//            url "https://maven-central.storage-download.googleapis.com/repos/central/data/" }
+//        mavenCentral()
+//        mavenLocal()
+        maven{ url 'http://maven.aliyun.com/nexus/content/groups/public/'}
+//        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+//        maven { url 'https://maven.aliyun.com/repository/google' }
+//        maven { url 'http://maven.aliyun.com/nexus/content/groups/public/' }
+//        maven { url 'https://maven.aliyun.com/repository/jcenter'}
     }
 
     tasks.withType(JavaCompile) {
